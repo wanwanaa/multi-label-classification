@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from transformers import AutoTokenizer, AutoModel
+from pytorch_pretrained_bert import BertModel
 
 
 class Embeds(nn.Module):
@@ -90,11 +90,16 @@ class Bahdanau_Attention(nn.Module):
 class EncoderBert(nn.Module):
     def __init__(self):
         super().__init__()
-        self.bert = AutoModel.from_pretrained("bert-base-chinese")
+        self.bert = BertModel.from_pretrained('bert-base-chinese')
+        self.linear_layer = nn.Linear(config.bert_size, config.hidden_size)
 
     def forward(self, x):
-        self.encoder_outputs = self.bert(x, return_tensor="pt")
-        return self.encoder_outputs
+        """
+        :param x:
+        :return:
+        """
+        self.encoder_outputs, _ = self.bert(x, output_all_encoded_layers=False)
+        return self.linear_layer(self.encoder_outputs)
 
 class Decoder(nn.Module):
     def __init__(self, config, attention):
@@ -109,6 +114,13 @@ class Decoder(nn.Module):
         )
         
     def forward(self, x, h, encoder_outputs):
+        """
+        :param x:
+        :param h:
+        :param encoder_outputs:
+        :return: out
+                 h
+        """
         out, h = self.rnn(x, h)
         _, out = self.attention(out, encoder_outputs)
         return out, h
